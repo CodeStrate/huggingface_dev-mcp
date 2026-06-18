@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { registerDescribeRepo } from "./tools/describe-repo";
+import { registerInspectRepo } from "./tools/inspect-repo";
 import { registerListModelRepos } from "./tools/list-model-repos";
 import { registerUploadModel } from "./tools/upload-model";
 import { registerGetModelUploadStatus } from "./tools/get-model-upload-status";
@@ -12,7 +12,7 @@ const server = new McpServer({
   version: "1.0.0",
 });
 
-registerDescribeRepo(server);
+registerInspectRepo(server);
 registerListModelRepos(server);
 registerUploadModel(server);
 registerGetModelUploadStatus(server);
