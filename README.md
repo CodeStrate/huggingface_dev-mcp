@@ -25,7 +25,7 @@ The [official HF MCP](https://huggingface.co/docs/hub/en/agents-mcp) covers sear
 **Requires [Bun](https://bun.sh)**
 
 ```bash
-git clone https://github.com/codestrate/hf-publish-mcp
+git clone https://github.com/CodeStrate/hf-publish-mcp
 cd hf-publish-mcp
 bun install
 ```
