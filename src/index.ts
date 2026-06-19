@@ -9,6 +9,7 @@ import { registerGetModelUploadStatus } from "./tools/get-model-upload-status";
 import { registerUpdateModelCard } from "./tools/update-model-card";
 import { loadJobs } from "./utils/upload-job-store";
 import { ensureAuthenticated } from "./client";
+import { registerManageUploadJobs } from "./tools/manage-upload-jobs";
 
 const server = new McpServer({
   name: "hf-publish",
@@ -20,6 +21,7 @@ registerListModelRepos(server);
 registerUploadModel(server);
 registerGetModelUploadStatus(server);
 registerUpdateModelCard(server);
+registerManageUploadJobs(server);
 
 async function main() {
   await ensureAuthenticated();

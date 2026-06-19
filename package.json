@@ -4,14 +4,16 @@
   "description": "MCP server for the fine-tuner's publish workflow on Hugging Face Hub — upload models, inspect repos, and maintain model cards.",
   "type": "module",
   "bin": {
-    "hf-publish": "./src/index.ts"
+    "hf-publish": "./dist/index.js"
   },
   "scripts": {
+    "build": "bun build --target=bun --outfile=dist/index.js src/index.ts",
+    "prepublishOnly": "bun run build",
     "start": "bun run src/index.ts",
     "dev": "bun --watch run src/index.ts"
   },
   "files": [
-    "src/"
+    "dist/"
   ],
   "keywords": [
     "mcp",

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { logger } from "../logger";
 import { getHFToken } from "../client";
 import { createRepo, uploadFilesWithProgress } from "@huggingface/hub";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { uploadJobs, type UploadJob } from "../types/upload-job";
 import { persistJobs } from "../utils/upload-job-store";
@@ -77,8 +77,22 @@ export function registerUploadModel(server: McpServer) {
                     repoUrl = `https://huggingface.co/${input.repoId}`;
                     } else throw e;
                 }
+                // guard added for bad dir
+                const dirStat = await stat(input.localDir).catch(() => null);
+                if(!dirStat?.isDirectory()){
+                    return {
+                        isError: true,
+                        content: [{type: "text" as const, text: `Directory specified not found: ${input.localDir}`}]
+                    }
+                }
 
                 const files = await collectFilesForUpload(input.localDir);
+                if (files.length === 0) {
+                    return {
+                        isError: true,
+                        content: [{ type: "text" as const, text: `No files found in ${input.localDir} (hidden files are excluded).` }],
+                    };
+                }
 
                 const jobId = crypto.randomUUID();
                 const job: UploadJob = {
