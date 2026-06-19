@@ -2,6 +2,12 @@
   <img width="1280" height="720" alt="hf-publish banner" src="https://github.com/user-attachments/assets/17d41de5-1343-4abf-96f9-68bfc95875af" />
   <h1>HF Publish</h1>
   <p>A local stdio MCP server for the fine-tuner's publish workflow on Hugging Face Hub.</p>
+
+  [![npm version](https://img.shields.io/npm/v/hf-publish-mcp?color=cb3837&logo=npm)](https://www.npmjs.com/package/hf-publish-mcp)
+  [![npm downloads](https://img.shields.io/npm/dm/hf-publish-mcp?color=cb3837&logo=npm)](https://www.npmjs.com/package/hf-publish-mcp)
+  [![license](https://img.shields.io/npm/l/hf-publish-mcp)](LICENSE)
+  [![bun](https://img.shields.io/badge/runtime-bun-f9f1e1?logo=bun&logoColor=black)](https://bun.sh)
+  [![MCP](https://img.shields.io/badge/transport-stdio-6366f1)](https://modelcontextprotocol.io)
 </div>
 
 ---
@@ -19,10 +25,19 @@ The [official HF MCP](https://huggingface.co/docs/hub/en/agents-mcp) covers sear
 | `upload_model` | Upload a model or adapter directory to HF. Non-blocking — returns a `jobId` immediately |
 | `get_model_upload_status` | Poll a background upload by `jobId`. Shows phase, current file, and elapsed time |
 | `update_model_card` | Patch a model card README via surgical section edits, frontmatter merges, or full rewrite |
+| `manage_upload_jobs` | List, delete, or batch-clean upload job history across active and dated archive files |
 
 ## Getting Started
 
 **Requires [Bun](https://bun.sh)**
+
+No install needed — run directly with `bunx`:
+
+```bash
+bunx hf-publish-mcp
+```
+
+Or clone for local development:
 
 ```bash
 git clone https://github.com/CodeStrate/hf-publish-mcp
@@ -38,28 +53,33 @@ On startup the server resolves your HF token in order:
 2. HF CLI token at `~/.cache/huggingface/token`
 3. Interactive `hf auth login` — **only works when running in a terminal**, not via an MCP client
 
-**Recommended:** run `bun run src/index.ts` once in a terminal to authenticate via the CLI, then use it from your MCP client. Alternatively, set `HF_TOKEN` directly in your client config.
-
 The token requires **write** scope.
 
 ## Client Config
 
-### Claude Desktop / Claude Code
+### Claude Desktop
 
 ```json
 {
   "mcpServers": {
     "hf-publish": {
-      "command": "bun",
-      "args": ["run", "/absolute/path/to/hf-publish-mcp/src/index.ts"]
+      "command": "bunx",
+      "args": ["hf-publish-mcp"],
+      "env": {
+        "HF_TOKEN": "hf_..."
+      }
     }
   }
 }
 ```
 
-### VS Code (`.vscode/mcp.json`)
+### Claude Code
 
-Prompts for the token via the VS Code secrets UI — nothing stored in plaintext.
+```bash
+claude mcp add hf-publish -- bunx hf-publish-mcp
+```
+
+### VS Code (`.vscode/mcp.json`) — token via secrets UI
 
 ```json
 {
@@ -74,8 +94,8 @@ Prompts for the token via the VS Code secrets UI — nothing stored in plaintext
   "servers": {
     "hf-publish": {
       "type": "stdio",
-      "command": "bun",
-      "args": ["run", "/absolute/path/to/hf-publish-mcp/src/index.ts"],
+      "command": "bunx",
+      "args": ["hf-publish-mcp"],
       "env": {
         "HF_TOKEN": "${input:hf-token}"
       }
@@ -84,12 +104,12 @@ Prompts for the token via the VS Code secrets UI — nothing stored in plaintext
 }
 ```
 
-### Generic stdio client
+### Generic stdio client (Cursor, PiCode, OpenCode, etc.)
 
 ```json
 {
-  "command": "bun",
-  "args": ["run", "/absolute/path/to/hf-publish-mcp/src/index.ts"],
+  "command": "bunx",
+  "args": ["hf-publish-mcp"],
   "env": {
     "HF_TOKEN": "hf_..."
   }
@@ -102,7 +122,7 @@ Prompts for the token via the VS Code secrets UI — nothing stored in plaintext
 
 `upload_model` is non-blocking. It creates the repo if absent, starts the upload in the background, and returns a `jobId` immediately. Poll with `get_model_upload_status`.
 
-Jobs persist to `~/.hf_mcp/upload-jobs.json` — status survives server restarts. Jobs interrupted mid-upload are marked `Error` on next start rather than left in a stale `Running` state.
+Jobs persist to `~/.hf_mcp/upload-jobs.json` — status survives server restarts. Jobs interrupted mid-upload are marked `Error` on next start rather than left in a stale `Running` state. Completed jobs are archived to dated files once the active file exceeds the limit.
 
 Progress is phase-level (`preuploading → uploadingLargeFiles → committing`) and file-level, powered by `uploadFilesWithProgress` from `@huggingface/hub`.
 

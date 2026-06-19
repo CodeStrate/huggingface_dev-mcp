@@ -22,6 +22,10 @@ export async function ensureAuthenticated(): Promise<void> {
     }
   } catch {}
 
+  // Interactive fallback — src/dev only. Requires a real TTY (stdin inherited).
+  // Not available when running as a published package via bunx from a headless MCP host
+  // (Claude Desktop, Claude Code, Cursor, PiCode, OpenCode, etc.) — set HF_TOKEN in
+  // your client's env config instead.
   process.stderr.write("No HF token found. Launching hf auth login...\n");
   const proc = Bun.spawn(["hf", "auth", "login"], { stdio: ["inherit", "inherit", "inherit"] });
   const exitCode = await proc.exited;
