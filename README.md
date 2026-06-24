@@ -24,7 +24,7 @@ The [official HF MCP](https://huggingface.co/docs/hub/en/agents-mcp) covers sear
 | `inspect_repo` | Verify expected files exist (config, tokenizer, weights) and return the model card |
 | `upload_model` | Upload a model or adapter directory to HF. Non-blocking — returns a `jobId` immediately |
 | `get_model_upload_status` | Poll a background upload by `jobId`. Shows phase, current file, and elapsed time |
-| `update_model_card` | Patch a model card README via surgical section edits, frontmatter merges, or full rewrite |
+| `update_model_card` | Patch a model card README via surgical section edits, frontmatter merges, or full rewrite (dry run support: review changes before agent commits) |
 | `manage_upload_jobs` | List, delete, or batch-clean upload job history across active and dated archive files |
 
 ## Getting Started
@@ -130,15 +130,18 @@ Progress is phase-level (`preuploading → uploadingLargeFiles → committing`) 
 
 `update_model_card` operates in two modes:
 
-**Surgical** — pass `frontmatter` and/or `sections`. Only the specified parts change; everything else is returned byte-for-byte. The remark AST is used purely as a position map to locate section boundaries, then the raw string is spliced directly. No formatting drift.
+**Surgical** - pass `frontmatter` and/or `sections`. Only the specified parts change; everything else is returned byte-for-byte. The remark AST is used purely as a position map to locate section boundaries, then the raw string is spliced directly. No formatting drift.
 
-**Full rewrite** — pass `content` with the complete README body. `frontmatter` and `removeFields` are still applied on top if provided.
+**Full rewrite** - pass `content` with the complete README body. `frontmatter` and `removeFields` are still applied on top if provided.
+
+**Dry Run Support** - A `dryRun` flag for when you would like to review changes before you'd want the agent to commit the changes. Allowing for manual adjustments in case something isn't right.
 
 ## Stack
 
 - TypeScript + Bun
-- [`@modelcontextprotocol/sdk`](https://github.com/modelcontextprotocol/typescript-sdk) — stdio transport
-- [`@huggingface/hub`](https://github.com/huggingface/huggingface.js/tree/main/packages/hub) — repo ops, uploads, file download
-- `gray-matter` — YAML frontmatter round-tripping
-- `remark` + `remark-gfm` — markdown AST for section position mapping
-- `pino` — structured logging to stderr (stdout reserved for MCP JSON-RPC)
+- [`@modelcontextprotocol/sdk`](https://github.com/modelcontextprotocol/typescript-sdk) - MCP SDK + stdio transport
+- [`@huggingface/hub`](https://github.com/huggingface/huggingface.js/tree/main/packages/hub) - repo ops, uploads, file download
+- `gray-matter` - YAML frontmatter round-tripping
+- `remark` + `remark-gfm` - markdown AST for section position mapping
+- `pino` - structured logging to stderr (stdout reserved for MCP JSON-RPC)
+- `diff` - reviewing model card changes in a diff before committing (through a dry run option)

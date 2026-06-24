@@ -8,6 +8,7 @@ import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import type { Root, Heading } from "mdast";
+import { createPatch } from "diff";
 
 function extractHeadingText(node: Heading): string {
     return node.children
@@ -124,17 +125,21 @@ export function registerUpdateModelCard(server: McpServer) {
                     "Headings of sections to delete entirely, e.g. ['## Old Results'].",
                 ),
                 commitMessage: z.string().default("Update model card").describe("Commit message"),
+                dryRun: z.boolean().default(true).describe("Update model card without commit")
             },
         },
-        async ({ repoId, content, frontmatter, removeFields, sections, removeSections, commitMessage }) => {
-            logger.info({ repoId }, "updating model card");
+        async ({ repoId, content, frontmatter, removeFields, sections, removeSections, commitMessage, dryRun }) => {
+            logger.info({ repoId, dryRun }, "updating model card");
             try {
                 const accessToken = getHFToken();
                 const repo = { type: "model" as const, name: repoId };
 
+                let original: string;
                 let updated: string;
 
                 if (content !== undefined) {
+                    const readmeResponse = await downloadFile({ repo, path: "README.md", accessToken });
+                    original = readmeResponse ? await readmeResponse.text() : "";
                     if (frontmatter || removeFields) {
                         const { data: existingData, content: body } = matter(content);
                         let data = existingData as Record<string, unknown>;
@@ -148,9 +153,9 @@ export function registerUpdateModelCard(server: McpServer) {
                     }
                 } else {
                     const readmeResponse = await downloadFile({ repo, path: "README.md", accessToken });
-                    const raw = readmeResponse ? await readmeResponse.text() : "---\n---\n";
+                    original = readmeResponse ? await readmeResponse.text() : "---\n---\n";
 
-                    let { data, content: body } = matter(raw);
+                    let { data, content: body } = matter(original);
 
                     if (frontmatter) {
                         data = { ...data, ...frontmatter };
@@ -170,6 +175,13 @@ export function registerUpdateModelCard(server: McpServer) {
                     }
 
                     updated = matter.stringify(body, data);
+                }
+
+                if(dryRun){
+                    const diffPatch = createPatch("README.md", original, updated);
+                    return {
+                        content: [{type: "text" as const, text: diffPatch}],
+                    };
                 }
 
                 await uploadFiles({

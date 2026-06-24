@@ -42,6 +42,7 @@
     "@gradio/client": "^2.2.1",
     "@huggingface/hub": "^2.13.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "diff": "^9.0.0",
     "gray-matter": "^4.0.3",
     "pino": "^10.3.1",
     "remark": "^15.0.1",
