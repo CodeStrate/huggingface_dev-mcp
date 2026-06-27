@@ -78,8 +78,8 @@ export function registerInspectRepo(server: McpServer) {
             count: modelWeights.length,
             files: modelWeights,
           },
-          all_present: isGGUF && 
-            fileChecks.every(({ exists }) => exists) && modelWeights.length > 0,
+          all_present: fileChecks.every(({ exists }) => exists) && modelWeights.length > 0,
+          isGGUF,
           modelCard,
         };
 

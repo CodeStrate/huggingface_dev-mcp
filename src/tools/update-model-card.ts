@@ -110,7 +110,7 @@ export function registerUpdateModelCard(server: McpServer) {
                     Avoid for single-field or minor changes — use frontmatter or sections instead.`,
                 ),
                 frontmatter: z.record(z.string(), z.unknown()).optional().describe(
-                    "Frontmatter fields to set. Arrays replace the existing value — provide the full desired array. Scalars replace.",
+                    "Frontmatter fields to merge into the existing card. Unspecified keys are preserved. Arrays replace entirely — to add a tag, pass existing tags + new tags.",
                 ),
                 removeFields: z.array(z.string()).optional().describe(
                     "Frontmatter keys to delete entirely, e.g. ['datasets', 'language'].",
@@ -142,8 +142,8 @@ export function registerUpdateModelCard(server: McpServer) {
                     original = readmeResponse ? await readmeResponse.text() : "";
                     if (frontmatter || removeFields) {
                         const { data: existingData, content: body } = matter(content);
-                        let data = existingData as Record<string, unknown>;
-                        if (frontmatter) data = { ...data, ...frontmatter };
+                        const {data: originalData } = matter(original);
+                        let data = {...originalData, ...existingData, ...(frontmatter ?? {}) } as Record<string, unknown>;
                         if (removeFields) {
                             for (const field of removeFields) delete data[field];
                         }
