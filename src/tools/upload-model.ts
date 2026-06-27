@@ -12,10 +12,16 @@ import { persistJobs } from "../utils/upload-job-store";
 async function collectFilesForUpload(directory:string): Promise<{path: string; content: Blob}[]> {
     const entries = await readdir(directory, { recursive: true, withFileTypes: true});
     return Promise.all(entries
-    .filter(entry => entry.isFile() && !entry.name.startsWith("."))
+    .filter(entry => {
+        // expand entry filter and exclude hidden dirs so non empty dir items can also be excluded from upload (.git)
+        if(!entry.isFile()) return false;
+        const rel = relative(directory, join(entry.parentPath, entry.name));
+        return !rel.split("/").some(segment => segment.startsWith("."));
+    })
     .map(async entry => {
         const absolutePath = join(entry.parentPath, entry.name)
-        return {path: relative(directory, absolutePath), content: new Blob([await readFile(absolutePath)])}
+        // Bun file is sync and lazy, helps in big model uploads by streaming and not full load shards.
+        return {path: relative(directory, absolutePath), content: Bun.file(absolutePath)}
     }))
 }
 
@@ -70,13 +76,6 @@ export function registerUploadModel(server: McpServer) {
                 const repo = { type: input.repoType, name: input.repoId };
 
                 let repoUrl: string;
-                try {
-                    ({ repoUrl } = await createRepo({ repo, visibility: input.visibility, accessToken }));
-                } catch (e: any) {
-                if (e?.statusCode === 409 || e?.message?.includes("already exists")) {
-                    repoUrl = `https://huggingface.co/${input.repoId}`;
-                    } else throw e;
-                }
                 // guard added for bad dir
                 const dirStat = await stat(input.localDir).catch(() => null);
                 if(!dirStat?.isDirectory()){
@@ -84,6 +83,13 @@ export function registerUploadModel(server: McpServer) {
                         isError: true,
                         content: [{type: "text" as const, text: `Directory specified not found: ${input.localDir}`}]
                     }
+                }
+                try {
+                    ({ repoUrl } = await createRepo({ repo, visibility: input.visibility, accessToken }));
+                } catch (e: any) {
+                if (e?.statusCode === 409 || e?.message?.includes("already exists")) {
+                    repoUrl = `https://huggingface.co/${input.repoId}`;
+                    } else throw e;
                 }
 
                 const files = await collectFilesForUpload(input.localDir);
