@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile, readdir, unlink } from "node:fs/promises";
+import { mkdir, readFile, writeFile, readdir, unlink, rename } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { uploadJobs, type UploadJob } from "../types/upload-job";
@@ -41,7 +41,10 @@ export async function persistJobs(): Promise<void> {
             const keep = completed.slice(completed.length - MAX_ACTIVE_COMPLETED);
             await appendToArchive(overflow);
             for (const [id] of overflow) uploadJobs.delete(id);
-            await writeFile(JOBS_FILE, JSON.stringify([...active, ...keep], null, 2));
+
+            const tempFile = JOBS_FILE + ".tmp"
+            await writeFile(tempFile, JSON.stringify([...active, ...keep], null, 2));
+            await rename(tempFile, JOBS_FILE);
         } else {
             await writeFile(JOBS_FILE, JSON.stringify([...uploadJobs.entries()], null, 2));
         }
