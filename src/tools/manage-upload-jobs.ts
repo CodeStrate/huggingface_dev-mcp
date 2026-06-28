@@ -109,6 +109,7 @@ export function registerManageUploadJobs(server: McpServer){
 
                         for (const [id, job] of uploadJobs.entries()) {
                             if (!job.completedAt) continue;
+                            if (status && job.jobStatus !== status) continue; // filters by status, allowing "delete all Error jobs before/after"
                             if (before ? job.completedAt < cutoff : job.completedAt > cutoff) {
                                 uploadJobs.delete(id);
                                 activeDeleted++;
@@ -116,14 +117,21 @@ export function registerManageUploadJobs(server: McpServer){
                         }
                         if (activeDeleted > 0) await persistJobs();
 
-                        let archivesDeleted = 0;
+                        let archivesAffected = 0;
                         for (const file of await listArchiveFiles()) {
-                            const match = file.match(/^upload-jobs\.(\d{4}-\d{2}-\d{2})\.json$/);
-                            if (!match) continue;
-                            const fileDate = new Date(match[1]!);
-                            if (before ? fileDate < cutoff : fileDate > cutoff) {
+                            const entries = await readArchiveJobs(file);
+                            const survivingJobs = entries.filter(([, job]) => {
+                                if (!job.completedAt) return true; // its ongoing/incomplete
+                                if (status && job.jobStatus !== status) return true;  // same as active
+                                return before ? !(job.completedAt < cutoff) : !(job.completedAt > cutoff); // inverse of active
+                            })
+
+                            if (survivingJobs.length === 0){ // archive doesn't have a incomplete job 
                                 await deleteArchiveFile(file);
-                                archivesDeleted++;
+                                archivesAffected++;
+                            }else if (survivingJobs.length < entries.length){
+                                await rewriteArchiveFile(file, survivingJobs); // only keep active/incomplete jobs
+                                archivesAffected++;
                             }
                         }
 
@@ -133,7 +141,7 @@ export function registerManageUploadJobs(server: McpServer){
                                 text: JSON.stringify({
                                     message: `Deleted jobs ${before ? "before" : "after"} ${date}.`,
                                     activeJobsDeleted: activeDeleted,
-                                    archiveFilesDeleted: archivesDeleted,
+                                    archivesAffected,
                                 }, null, 2),
                             }],
                         };
