@@ -22,7 +22,10 @@ export async function ensureAuthenticated(): Promise<void> {
     }
   } catch {}
 
-  process.stderr.write("No HF token found. Set HF_TOKEN in your MCP client config.\n");
+  process.stderr.write(
+    "No HF token found. Set HF_TOKEN in your MCP client env config, " +
+    "or run 'huggingface-cli login' to cache a token at " + HF_CLI_TOKEN_PATH + ".\n"
+  );
   process.exit(1);
 }
 
