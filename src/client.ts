@@ -22,28 +22,10 @@ export async function ensureAuthenticated(): Promise<void> {
     }
   } catch {}
 
-  // Interactive fallback — src/dev only. Requires a real TTY (stdin inherited).
-  // Not available when running as a published package via bunx from a headless MCP host
-  // (Claude Desktop, Claude Code, Cursor, PiCode, OpenCode, etc.) — set HF_TOKEN in
-  // your client's env config instead.
-  process.stderr.write("No HF token found. Launching hf auth login...\n");
-  const proc = Bun.spawn(["hf", "auth", "login"], { stdio: ["inherit", "inherit", "inherit"] });
-  const exitCode = await proc.exited;
-
-  if (exitCode !== 0) {
-    process.stderr.write("huggingface-cli login failed.\n");
-    process.exit(1);
-  }
-
-  try {
-    const token = readFileSync(HF_CLI_TOKEN_PATH, "utf-8").trim();
-    if (token) {
-      process.env.HF_TOKEN = token;
-      return;
-    }
-  } catch {}
-
-  process.stderr.write("Token not found after login. Set HF_TOKEN manually in your MCP config.\n");
+  process.stderr.write(
+    "No HF token found. Set HF_TOKEN in your MCP client env config, " +
+    "or run 'huggingface-cli login' to cache a token at " + HF_CLI_TOKEN_PATH + ".\n"
+  );
   process.exit(1);
 }
 
