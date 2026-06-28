@@ -13,7 +13,7 @@ import { registerManageUploadJobs } from "./tools/manage-upload-jobs";
 
 const server = new McpServer({
   name: "hf-publish",
-  version: "1.0.0",
+  version: "1.0.3",
 });
 
 registerInspectRepo(server);
